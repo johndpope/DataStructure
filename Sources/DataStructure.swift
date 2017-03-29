@@ -1,9 +1,14 @@
-@inline(__always)
-internal func compare_und_swap<T: Equatable>(_ local: inout T, _ dest: UnsafeMutablePointer<T>, _ val: T) -> Bool {
-    // if the destination remain the same, then assign new value
-    if local == dest.pointee {
-        dest.pointee = val
-        return true;
-    }
-    return false
+import CKit
+
+internal protocol ForwardNode {
+    associatedtype Element
+    var _next: UnsafeMutablePointer<Self>? { get set }
+    var storage: Element? { get set }
+    init(storage: Element?)
+}
+
+internal protocol BackwardNode {
+    associatedtype Element
+    var _pervious: UnsafeMutablePointer<Self>? { get set }
+    var storage: Element? { get set }
 }
