@@ -3,12 +3,20 @@ import CKit
 internal protocol ForwardNode {
     associatedtype Element
     var _next: UnsafeMutablePointer<Self>? { get set }
-    var storage: Element? { get set }
-    init(storage: Element?)
+    var item: Element? { get set }
+    init(item: Element?)
 }
 
 internal protocol BackwardNode {
     associatedtype Element
     var _pervious: UnsafeMutablePointer<Self>? { get set }
-    var storage: Element? { get set }
+    var item: Element? { get set }
+}
+
+internal protocol BidirectionalNode: ForwardNode, BackwardNode {
+    
+}
+
+func sizeof<T>(_: T.Type) -> Int {
+    return MemoryLayout<T>.size
 }

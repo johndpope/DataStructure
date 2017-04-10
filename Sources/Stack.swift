@@ -1,57 +1,28 @@
 
 import CKit
 
-internal func stack_push<T: ForwardNode>(_ stackPointer: inout UnsafeMutablePointer<T>?,
-                         _ pointer: UnsafeMutablePointer<T>)
-{
-    pointer.pointee._next = stackPointer
-    stackPointer = pointer
-}
-
-internal func stack_pop<T: ForwardNode>(_ stackPointer: inout UnsafeMutablePointer<T>?,
-                        _ out: inout UnsafeMutablePointer<T>?)
-{
-    guard let _stackPointer = stackPointer else {
-        return
-    }
-    
-    stackPointer = _stackPointer.pointee._next
-    out = _stackPointer
-    out?.pointee._next = nil
-}
-
-internal func stack_items_count<T: ForwardNode>(_ stackPointer:  UnsafeMutablePointer<T>?) -> Int {
-    var count = 0
-    var local = stackPointer
-    
-    while local != nil {
-        local = local?.pointee._next
-        count += 1
-    }
-    return count
-}
-
-
 public class Stack<T> : Collection {
     
-    var _entry: UnsafeMutablePointer<Node>?
-    var _trashcan: UnsafeMutablePointer<Node>?
+    public typealias NodeRef = UnsafeMutablePointer<Node>
+    
+    var _entry: NodeRef?
+    var _trashcan: NodeRef?
     
     var _count: Int = 0
+    var _capacity: Int = 0
+    var _cleanup = [() -> Void]()
     
     public var count: Int {
         return _count
     }
     
-    public func reserveCapacity(count: Int) {
-        if count <= self.count {
+    public func reserveCapacity(count: Int) 
+    {
+        if count <= self._capacity {
             return
         }
         
-        for _ in 0 ..< (count - self.count) {
-            let nodep = make_new_node(element: nil)
-            stack_push(&_trashcan, nodep)
-        }
+        make_new_nodes(count: count - self.count)
     }
     
     public func push(item: T) {
@@ -60,8 +31,9 @@ public class Stack<T> : Collection {
     }
     
     public func popFirst() -> T? {
-        var trash: UnsafeMutablePointer<Node>?
-        let ret = _entry?.pointee.storage
+        var trash: NodeRef?
+        let ret = _entry?.pointee.item
+        _entry?.pointee.item = nil
         stack_pop(&_entry, &trash)
         if let trash = trash {
             stack_push(&_trashcan, trash)
@@ -71,37 +43,24 @@ public class Stack<T> : Collection {
     }
     
     deinit {
-        var start = _entry
-        
-        while start?.pointee._next != nil {
-            if let _start_ = start {
-                start = _start_.pointee._next
-                _start_.deallocate(capacity: 1)
-            }
-        }
-        
-        while (_trashcan != nil) {
-            var node: UnsafeMutablePointer<Node>?
-            stack_pop(&_trashcan, &node)
-            node?.deallocate(capacity: 1)
-        }
+        _cleanup.forEach{$0()}
     }
 }
 
 public extension Stack {
     public struct Node : ForwardNode {
         public typealias Element = T
-        var storage: T?
-        var _next: UnsafeMutablePointer<Node>?
-        init(storage: T?) {
-            self.storage = storage
+        var item: T?
+        var _next: NodeRef?
+        init(item: T?) {
+            self.item = item
         }
     }
 }
 
 public extension Stack {
     @inline(__always)
-    func iterator_pointer(at index: Int) -> UnsafeMutablePointer<Node>? {
+    func iterator_pointer(at index: Int) -> NodeRef? {
         guard let entry = self._entry,
             index < count else {
                 return nil
@@ -115,29 +74,50 @@ public extension Stack {
     
     @inline(__always)
     func recount() {
-        self._count = stack_items_count(_entry)
-    }
-
-    @inline(__always)
-    func make_new_node(element: T?) -> UnsafeMutablePointer<Node> {
-        let nodep = UnsafeMutablePointer<Node>.allocate(capacity: 1)
-        var node = Node(storage: element)
-        memcpy(nodep.mutableRawPointer,
-               mutablePointer(of: &node).rawPointer, MemoryLayout<Node>.size)
-        return nodep
+        self._count = stack_count(_entry)
     }
     
     @inline(__always)
-    func request_node(with value: T) -> UnsafeMutablePointer<Node> {
-        var nodep: UnsafeMutablePointer<Node>?
-        if !attempt_recycle_node(to: &nodep) {
-            nodep = make_new_node(element: value)
+    func request_node(with value: T) -> NodeRef 
+    {
+        var nodep: NodeRef?
+
+        while !attempt_recycle_node(to: &nodep) {
+            make_new_node()
         }
+        
+        nodep?.pointee.item = value
         return nodep!
     }
     
     @inline(__always)
-    func attempt_recycle_node(to output: inout UnsafeMutablePointer<Node>?) -> Bool {
+    func estimate_nodes_should_alloc() -> Int {
+        return Swift.max(self._capacity/8, 5)
+    }
+    
+    @inline(__always)
+    func make_new_node() {
+        make_new_nodes(count: estimate_nodes_should_alloc())
+    }
+    
+    @inline(__always)
+    func make_new_nodes(count: Int)
+    {
+        let nodep = NodeRef.allocate(capacity: count)
+        _capacity += count
+        let node = Node(item: nil)
+        for i in 0..<count {
+            nodep.advanced(by: i).initialize(to: node)
+            stack_push(&_trashcan, nodep.advanced(by: i))
+        }
+        _cleanup.append {
+            nodep.deallocate(capacity: count)
+        }
+    }
+    
+    @inline(__always)
+    func attempt_recycle_node(to output: inout NodeRef?) -> Bool
+    {
         stack_pop(&self._trashcan, &output)
         
         if output == nil {
@@ -145,7 +125,7 @@ public extension Stack {
         }
         
         output!.pointee._next = nil
-        output!.pointee.storage = nil
+        output!.pointee.item = nil
         return true
     }
 }
@@ -170,9 +150,10 @@ public extension Stack {
         return Stack<T>()
     }
     
-    public subscript(position: Int) -> Node.Element {
+    public subscript(position: Int) -> Node.Element 
+    {
         let it = iterator_pointer(at: position)
-        return it!.pointee.storage!
+        return it!.pointee.item!
     }
 }
 

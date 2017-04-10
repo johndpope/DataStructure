@@ -4,99 +4,87 @@ import CKit
 public final class LinkedList<T> : Collection
 {
 
+    public typealias NodeRef = UnsafeMutablePointer<Node>
+    // to not conflict with the (immutable) count of collection
     var _count = 0
-    var _first: UnsafeMutablePointer<Node>?
-    var _last: UnsafeMutablePointer<Node>?
-    var _trashcan: UnsafeMutablePointer<Node>? // stack storing trash nodes
-
-//    #if DEBUG
+    
+    var _capacity = 0
+    
+    // The entry node to the linked list data structure
+    var _entry: NodeRef?
+    
+    // The end node of the linked list.
+    var _last: NodeRef?
+    
+    // A stack that contains reuseable nodes
+    var _trashcan: NodeRef? // stack storing trash nodes
+    
+    var _cleanup_stack = [() -> ()]()
+    
+    // for debug only
     var using_stack_allocated_nodes = false
-//    #endif
 
     public init() {
-
-    }
-
-    public init(list: LinkedList<T>, from: Int, to: Int) {
-        self._first = list._first
-        self._count = to - from
     }
 
     deinit {
-
-        if using_stack_allocated_nodes {
-            return
-        }
-        var start = _first
-
-        while start?.pointee._next != nil {
-            if let _start_ = start {
-                start = _start_.pointee._next
-                _start_.deallocate(capacity: 1)
-            }
-        }
-
-        while (_trashcan != nil) {
-            var node: UnsafeMutablePointer<Node>?
-            stack_pop(&_trashcan, &node)
-            node?.deallocate(capacity: 1)
-        }
+        _cleanup_stack.forEach{$0()}
     }
 }
 
 public extension LinkedList
 {
     public func makeIterator() -> Node {
-        return Node(mirror: _first)
+        return Node(mirror: _entry)
     }
 
-    public struct Node: IteratorProtocol, ForwardNode {
+    public struct Node: IteratorProtocol, ForwardNode, BackwardNode {
 
         public typealias Element = T
 
-        var _next: UnsafeMutablePointer<Node>?
-        var _pervious: UnsafeMutablePointer<Node>?
+        var _next: NodeRef?
+        var _pervious: NodeRef?
 
-        public var storage: Element?
+        public var item: Element?
 
-        public init(mirror: UnsafeMutablePointer<Node>?) {
+        public init(mirror: NodeRef?) 
+        {
             self._next = mirror
-            self.storage = mirror?.pointee.storage
+            self.item = mirror?.pointee.item
         }
 
-        public init(storage: Element?) {
-            self.storage = storage
+        public init(item: Element?) {
+            self.item = item
         }
 
-        public mutating func next() -> Element? {
-    
+        public mutating func next() -> Element? 
+        {
             guard let _next_ = _next else {
                 return nil
             }
             
             self = _next_.pointee
-            return _next_.pointee.storage
-        }
-        
-        static func dummy(linking: UnsafeMutablePointer<Node>) -> Node {
-            return Node(mirror: linking)
+            return _next_.pointee.item
         }
 
-        static func pop(node: UnsafeMutablePointer<Node>)  {
+        static func pop(node: NodeRef)  
+        {
             node.pointee._next?.pointee._pervious = node.pointee._pervious
             node.pointee._pervious?.pointee._next = node.pointee._next
         }
 
-        static func push_front(target: UnsafeMutablePointer<Node>,
-                                           _ node: UnsafeMutablePointer<Node>) {
+        static func push_front(target: NodeRef,
+                               _ node: NodeRef) 
+        {
             target.pointee._pervious?.pointee._next = node
             node.pointee._pervious = target.pointee._pervious
             target.pointee._pervious = node
             node.pointee._next = target
         }
 
-        static func push_back(target: UnsafeMutablePointer<Node>,
-                                          _ node: UnsafeMutablePointer<Node>) {
+        static func push_back(target: NodeRef,
+                              _ node: NodeRef) 
+        {
             node.pointee._next = target.pointee._next
             target.pointee._next?.pointee._pervious = node
             node.pointee._pervious = target
@@ -107,44 +95,38 @@ public extension LinkedList
 
 public extension LinkedList {
 
+    /// This function turns an empty list to a list contains 1 item
+    ///
+    /// - Parameter node: The new first node (and also as the last node)
     @inline(__always)
-    func reserver_capacity(count: Int) {
-        if count <= self.count {
-            return
-        }
-
-        for _ in 0 ..< (count - self.count) {
-            let nodep = make_new_node(element: nil)
-            stack_push(&_trashcan, nodep)
-        }
-    }
-
-    func list_is_empty() -> Bool {
-        return _first == nil && _last == nil
-    }
-
-    @inline(__always)
-    func init_list(with node: UnsafeMutablePointer<Node>) {
+    func entry_reconfig(with node: NodeRef) 
+    {
         node.pointee._next = nil
         node.pointee._pervious = nil
-        _first = node
+        _entry = node
         _last = node
         _count = 1
     }
 
+    /// This function turns check if the list is empty and reset the _entry and end nodes
     @inline(__always)
-    func test_drain() {
-        if _last == nil || _first == nil {
-            _first = nil
+    func check_empty() 
+    {
+        if _last == nil || _entry == nil {
+            _entry = nil
             _last = nil
         }
     }
 
+    /// This function push a node in front of an particular node
+    ///
+    /// - Parameter node: a new node will add in front of this node
     @inline(__always)
-    func push_front(node: UnsafeMutablePointer<Node>) {
-        if let _first_ = _first {
+    func push_front(node: NodeRef) 
+    {
+        if let _first_ = _entry {
             if _last == _first_ {
-                _first = node
+                _entry = node
             }
             Node.push_front(target: _first_, node)
             _count += 1
@@ -152,12 +134,15 @@ public extension LinkedList {
         }
 
         // if the list is empty
-        init_list(with: node)
+        entry_reconfig(with: node)
     }
 
+    /// This function push a node in the back of an particular node
+    ///
+    /// - Parameter node: a new node will push at the back of this node
     @inline(__always)
-    func push_back(node: UnsafeMutablePointer<Node>) {
-        
+    func push_back(node: NodeRef) 
+    {    
         if let _last_ = _last {
             Node.push_back(target: _last_, node)
             _last = node
@@ -165,96 +150,113 @@ public extension LinkedList {
             return
         }
         // if the list is empty
-        init_list(with: node)
+        entry_reconfig(with: node)
     }
 
+    /// Remove a node from the list and push it to the stack, return the value it contains
+    ///
+    /// - Parameter node: the node to remove
     @inline(__always)
-    func pop(_ node: UnsafeMutablePointer<Node>) {
+    func remove(_ node: NodeRef) -> T? 
+    {
+        let ret = node.pointee.item
         _count -= 1
+        // remove strong reference
+        node.pointee.item = nil
         Node.pop(node: node)
         stack_push(&_trashcan, node)
-        test_drain()
+        check_empty()
+        return ret
     }
 
+    /// Create and allocate a new node in heap
+    ///
+    /// - Parameter element: initial value
     @inline(__always)
-    func pop_back(_ output: inout T?) {
-        // no item, what you expect
-        guard let _last_ = _last else {
-            output = nil
-            return
-        }
-        
-        output = _last_.pointee.storage
-        _last = _last_.pointee._pervious
-        pop(_last_)
-    }
-
-    @inline(__always)
-    func pop_front(_ output: inout T?) {
-        // no item, what you expect
-        guard let _first_ = _first else {
-            output = nil
-            return
-        }
-
-        output = _first_.pointee.storage
-        _first = _first_.pointee._next
-        pop(_first_)
-    }
-
-    @inline(__always)
-    func make_new_node(element: T?) -> UnsafeMutablePointer<Node> {
-        let nodep = UnsafeMutablePointer<Node>.allocate(capacity: 1)
-        var node = Node(storage: element)
-        memcpy(nodep.mutableRawPointer, mutablePointer(of: &node).rawPointer, MemoryLayout<Node>.size)
-        print("allocated")
-        return nodep
+    func make_new_node()
+    {
+        make_new_nodes(count: estimate_nodes_should_alloc())
     }
     
     @inline(__always)
-    func request_node(with value: T) -> UnsafeMutablePointer<Node> {
-        var nodep: UnsafeMutablePointer<Node>?
-        if !attempt_recycle_node(to: &nodep) {
-            nodep = make_new_node(element: value)
-        } else {
-            nodep!.pointee.storage = value
+    func make_new_nodes(count: Int) {
+        let nodep = NodeRef.allocate(capacity: count)
+        
+        let emptyNodeTemplate = Node(item: nil)
+
+        for i in 0..<count {
+            nodep.advanced(by: i).initialize(to: emptyNodeTemplate)
+            stack_push(&_trashcan, nodep.advanced(by: i))
         }
-        return nodep!
+        
+        self._capacity += count
+        
+        _cleanup_stack.append {
+            nodep.deallocate(capacity: count)
+        }
     }
     
     @inline(__always)
-    func attempt_recycle_node(to output: inout UnsafeMutablePointer<Node>?) -> Bool {
-        
+    func estimate_nodes_should_alloc() -> Int {
+        return Swift.max(self._capacity/8, 5)
+    }
+    
+    
+    /// Get a reusable node from the trashcan stack
+    ///
+    /// - Parameter output: the pointer to the new node will write to here
+    /// - Returns: if we recycle the node successfully
+    @inline(__always)
+    func attempt_recycle_node(to output: inout NodeRef?) -> Bool
+    {    
         stack_pop(&self._trashcan, &output)
-
+        
         if output == nil {
             return false
         }
         
         output!.pointee._next = nil
         output!.pointee._pervious = nil
-        output!.pointee.storage = nil
+        output!.pointee.item = nil
         
         return true
     }
     
+    /// Get a node to use from either reusable nodes or allocate a new one
+    ///
+    /// - Parameter value: set the value of the requested node
     @inline(__always)
-    func iterator_pointer(at index: Int) -> UnsafeMutablePointer<Node>? {
-        guard let first = self._first,
+    func request_node(with value: T) -> NodeRef
+    {
+        var nodep: NodeRef?
+        
+        while !attempt_recycle_node(to: &nodep) {
+            _ = make_new_node()
+        }
+        
+        nodep!.pointee.item = value
+        return nodep!
+    }
+    
+    /// Get a pointer to the node at index
+    ///
+    /// - Parameter index: which node
+    /// - Returns: the pointer to the node
+    @inline(__always)
+    func iterator_pointer(at index: Int) -> NodeRef?
+    {
+        guard let first = self._entry,
                 index < count else {
-                    print("index < count")
             return nil
         }
         
-        print(first.pointee)
-        
         var it = first
+        
         
         for _ in 0..<index {
             it = it.pointee._next!
         }
-        
-        print(it)
+    
         return it
     }
 }
@@ -281,19 +283,51 @@ public extension LinkedList {
     }
 
     public func reserveCapacity(count: Int) {
-        reserver_capacity(count: count)
+        if count <= self._capacity {
+            return
+        }
+
+        make_new_nodes(count: self._capacity - self.count)
     }
 
+    @discardableResult
+    public func remove(at index: Int) -> T? {
+
+        if index == startIndex {
+            return popFirst()
+        } else if index == endIndex {
+            return removeLast()
+        }
+        
+        guard let ptr = iterator_pointer(at: index) else {
+            return nil
+        }
+        
+        return remove(ptr)
+    }
+
+    @discardableResult
     public func popFirst() -> T? {
-        var ret: T?
-        pop_front(&ret)
-        return ret
+        guard let _first_ = _entry else {
+            return nil
+        }
+        _entry = _first_.pointee._next
+        return remove(_first_)
+    }
+    
+    @discardableResult
+    @inline(__always)
+    public func removeFirst() -> T {
+        return popFirst()!
     }
 
+    @discardableResult
     public func removeLast() -> T? {
-        var ret: T?
-        pop_back(&ret)
-        return ret
+        guard let _last_ = _last else {
+            return nil
+        }
+        _last = _last_.pointee._pervious
+        return remove(_last_)
     }
 }
 
@@ -311,7 +345,7 @@ public extension LinkedList {
     }
 
     public var first: T? {
-        return _first?.pointee.storage
+        return _entry?.pointee.item
     }
 }
 
@@ -337,6 +371,6 @@ public extension LinkedList {
 
     public subscript(position: Int) -> Node.Element {
         let it = iterator_pointer(at: position)
-        return it!.pointee.storage!
+        return it!.pointee.item!
     }
 }
