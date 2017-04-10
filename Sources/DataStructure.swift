@@ -20,3 +20,8 @@ internal protocol BidirectionalNode: ForwardNode, BackwardNode {
 func sizeof<T>(_: T.Type) -> Int {
     return MemoryLayout<T>.size
 }
+
+@inline(__always)
+func constraintedIncrement<T: Integer>(_ i: inout T, constraint: T) {
+    i = (i + 1) % constraint
+}

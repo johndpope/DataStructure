@@ -45,54 +45,102 @@ class SharedTestRefType {
     }
 }
 
+public func cr(_ ir: UInt) -> Int {
+    print("passed")
+    for i in 0..<(MemoryLayout<UInt>.size * 8 - 1) {
+        if UInt(1 << i) | (ir << UInt(i)) == 0 {
+            return i
+        }
+    }
+    return 0
+}
+
 func printSeparator() {
     print("\n\n")
 }
 
 class DataStructureTests: XCTestCase {
 
-//    var array = Array<SharedTestValueType>()
-//    var arrayv = Array<SharedTestRefType>()
-//    
-//    func test_brenchmark_array() {
-//        
-//        print("")
-//        print("")
-//        
-//        self.array.reserveCapacity(300000)
-//        measure {
-//            for _ in 0..<300000 {
-//                self.array.append(SharedTestValueType())
-//            }
+    func test_bitmap() {
+        var bitmap = Bitmap()
+        
+        bitmap[2] = true
+        bitmap[1] = true
 //
-//            for _ in 0..<500 {
-//                self.array.removeLast()
-//            }
+        print(bitmap.bits.map {
+            String($0.i, radix: 2)
+        })
 //
-//            for _ in 0..<150000 {
-//                self.array.append(SharedTestValueType())
-//            }
-//        }
-//    }
-//    
-//    func test_brenchmark_arrayv() {
-//        print("")
-//        print("")
-//        self.arrayv.reserveCapacity(300000)
-//        measure {
-//            for _ in 0..<300000 {
-//                self.arrayv.append(SharedTestRefType())
-//            }
-//            
-//            for _ in 0..<500 {
-//                self.arrayv.append(SharedTestRefType())
-//            }
-//            
-//            for _ in 0..<300000 {
-//                self.arrayv.append(SharedTestRefType())
-//            }
-//        }
-//    }
+        XCTAssertEqual(bitmap[2], true)
+        XCTAssertEqual(bitmap[1], true)
+        
+        bitmap[1] = false
+        
+        XCTAssertEqual(bitmap[1], false)
+        XCTAssertEqual(bitmap[0], false)
+        
+        XCTAssertEqual(bitmap[2], true)
+        
+        bitmap[799] = true
+        XCTAssertEqual(bitmap[799], true)
+    }
+   
+    func test_bitmap_high() {
+        var bitmap = Bitmap(compressionRate: .high)
+//        
+        bitmap[2] = true
+        bitmap[1] = true
+//        //
+        print(bitmap.bits.map {
+            String($0.i, radix: 2)
+        })
+        //
+        XCTAssertEqual(bitmap[2], true)
+        XCTAssertEqual(bitmap[1], true)
+//
+        bitmap[1] = false
+//
+        XCTAssertEqual(bitmap[1], false)
+        XCTAssertEqual(bitmap[0], false)
+        
+        XCTAssertEqual(bitmap[2], true)
+        
+        bitmap[799] = true
+        XCTAssertEqual(bitmap[799], true)
+        
+        bitmap[12341234134124] = true
+        XCTAssertEqual(bitmap[12341234134124], true)
+//        XCTAssertEqual(bitmap[12341234134125], false)
+//        
+//        print(bitmap.bits.map {
+//            String($0.i, radix: 2)
+//        })
+        //
+    }
+    
+    func test_bitmap_low() {
+        var bitmap = Bitmap(compressionRate: .low)
+        
+        bitmap[2] = true
+        bitmap[1] = true
+        //
+        print(bitmap.bits.map {
+            String($0.i, radix: 2)
+        })
+        //
+        XCTAssertEqual(bitmap[2], true)
+        XCTAssertEqual(bitmap[1], true)
+        
+        bitmap[1] = false
+        
+        XCTAssertEqual(bitmap[1], false)
+        XCTAssertEqual(bitmap[0], false)
+        
+        XCTAssertEqual(bitmap[2], true)
+        
+        bitmap[799] = true
+        XCTAssertEqual(bitmap[799], true)
+    }
     
     static var allTests : [(String, (DataStructureTests) -> () throws -> Void)] {
         return [

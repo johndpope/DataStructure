@@ -5,12 +5,15 @@ public class Stack<T> : Collection {
     
     public typealias NodeRef = UnsafeMutablePointer<Node>
     
+    public var allocator: Allocator = SwiftAllocator()
+    
     var _entry: NodeRef?
     var _trashcan: NodeRef?
     
     var _count: Int = 0
     var _capacity: Int = 0
     var _cleanup = [() -> Void]()
+    
     
     public var count: Int {
         return _count
@@ -103,7 +106,8 @@ public extension Stack {
     @inline(__always)
     func make_new_nodes(count: Int)
     {
-        let nodep = NodeRef.allocate(capacity: count)
+        let nodep: NodeRef = self.allocator.allocate(capacity: count)
+        
         _capacity += count
         let node = Node(item: nil)
         for i in 0..<count {
@@ -111,7 +115,7 @@ public extension Stack {
             stack_push(&_trashcan, nodep.advanced(by: i))
         }
         _cleanup.append {
-            nodep.deallocate(capacity: count)
+            self.allocator.deallocate(pointer: nodep, capacity: count)
         }
     }
     

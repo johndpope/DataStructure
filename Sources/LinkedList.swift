@@ -5,6 +5,9 @@ public final class LinkedList<T> : Collection
 {
 
     public typealias NodeRef = UnsafeMutablePointer<Node>
+    
+    public var allocator: Allocator = SwiftAllocator()
+    
     // to not conflict with the (immutable) count of collection
     var _count = 0
     
@@ -180,8 +183,7 @@ public extension LinkedList {
     
     @inline(__always)
     func make_new_nodes(count: Int) {
-        let nodep = NodeRef.allocate(capacity: count)
-        
+        let nodep: NodeRef = allocator.allocate(capacity: count)
         let emptyNodeTemplate = Node(item: nil)
 
         for i in 0..<count {
@@ -192,7 +194,7 @@ public extension LinkedList {
         self._capacity += count
         
         _cleanup_stack.append {
-            nodep.deallocate(capacity: count)
+            self.allocator.deallocate(pointer: nodep, capacity: count)
         }
     }
     

@@ -1,8 +1,4 @@
 
-private func constraintedIncrement<T: Integer>(_ i: inout T, constraint: T) {
-    i = (i + 1) % constraint
-}
-
 public struct RingBuffer<T> : Collection {
 
     var storage: Array<T>
