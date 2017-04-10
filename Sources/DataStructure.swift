@@ -21,6 +21,10 @@ func sizeof<T>(_: T.Type) -> Int {
     return MemoryLayout<T>.size
 }
 
+func bitSizeof<T>(_: T.Type) -> Int {
+    return MemoryLayout<T>.size * 8
+}
+
 @inline(__always)
 func constraintedIncrement<T: Integer>(_ i: inout T, constraint: T) {
     i = (i + 1) % constraint

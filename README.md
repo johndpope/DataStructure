@@ -17,13 +17,10 @@ The stack in this repo is implemented as linked list. It is basically same as th
 
 ## Bitmap
 
-Bitmap supports three different compressions.
+The implementation of Bitmap in this package is storaging 64 bit integer as storing backend (for both 32bit and 64bit processors). The sparsity property of the bitmap determine the max capacity and storage efficientcy of the Bitmap.
 
-With low compression, the max capacity of the bitmap is ((2^48) - 1) * 16. However for each 4 bytes of integer the bitmap can only store 16 boolean values.
+The max capacity of the Bitmap is (s = sparsity) (2^s - 1) * (64 - s). The efficientcy of the Bitmap is (64 - s) boolean values per 4 bytes. Bitmap with higher sparsity has higher max capacity therefore can store a wider range of indices but less values can be stored per byte. Bitmap with lower sparsity has fewer maximum capacity but can store more items per byte.
 
-With medium compression, the max capacity of the bitmap is ((2^32) - 1) * 32. For each 4 bytes the bitmap can store 32 boolean values.
-
-With high compression, the max capacity of the bitmap is ((2^16) - 1) * 48. For each 4 bytes the bitmap can store 48 boolean values.
 ## RingBuffer
 
 
