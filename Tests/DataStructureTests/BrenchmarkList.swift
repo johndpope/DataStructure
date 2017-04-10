@@ -1,5 +1,6 @@
 
 @testable import DataStructure
+import Foundation
 
 extension DataStructureTests {
 
@@ -21,10 +22,10 @@ extension DataStructureTests {
 
         printSeparator()
     }
- 
+    
     func test_brenchmark_list_val() {
         let list = LinkedList<SharedTestValueType>()
-//        list.reserveCapacity(count: 450000)
+        list.reserveCapacity(count: 450000)
 
         measure {
             for _ in 0..<300000 {

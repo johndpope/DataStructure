@@ -1,4 +1,6 @@
 
+import Foundation
+
 extension DataStructureTests {
     
     func test_brenchmark_array_ref() {
@@ -20,10 +22,11 @@ extension DataStructureTests {
         
         printSeparator()
     }
-    
+ 
     func test_brenchmark_array_val() {
         var array = Array<SharedTestValueType>()
-        
+        array.reserveCapacity(450000)
+    
         measure {
             for _ in 0..<300000 {
                 array.append(SharedTestValueType())
