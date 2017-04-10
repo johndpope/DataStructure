@@ -85,8 +85,8 @@ class DataStructureTests: XCTestCase {
         XCTAssertEqual(bitmap[799], true)
     }
    
-    func test_bitmap_high() {
-        var bitmap = Bitmap(compressionRate: .high)
+    func test_bitmap_low() {
+        var bitmap = Bitmap(compressionRate: .low)
 //        
         bitmap[2] = true
         bitmap[1] = true
@@ -118,8 +118,8 @@ class DataStructureTests: XCTestCase {
         //
     }
     
-    func test_bitmap_low() {
-        var bitmap = Bitmap(compressionRate: .low)
+    func test_bitmap_high() {
+        var bitmap = Bitmap(compressionRate: .high)
         
         bitmap[2] = true
         bitmap[1] = true

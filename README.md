@@ -17,6 +17,13 @@ The stack in this repo is implemented as linked list. It is basically same as th
 
 ## Bitmap
 
+Bitmap supports three different compressions.
+
+With low compression, the max capacity of the bitmap is ((2^48) - 1) * 16. However for each 4 bytes of integer the bitmap can only store 16 boolean values.
+
+With medium compression, the max capacity of the bitmap is ((2^32) - 1) * 32. For each 4 bytes the bitmap can store 32 boolean values.
+
+With high compression, the max capacity of the bitmap is ((2^16) - 1) * 48. For each 4 bytes the bitmap can store 48 boolean values.
 ## RingBuffer
 
 
