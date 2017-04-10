@@ -3,19 +3,6 @@ import XCTest
 @testable import DataStructure
 
 extension DataStructureTests {
-    
-    func teste_ring_buffer_iterator() {
-        var buffer = RingBuffer<Int>(capacity: 5)
-        buffer.enqueue(item: 0)
-        buffer.enqueue(item: 1)
-        buffer.enqueue(item: 2)
-        buffer.enqueue(item: 3)
-        buffer.enqueue(item: 4)
-        
-        for i in buffer {
-            print(i)
-        }
-    }
 
     func test_ring_buffer_get_correct_val() {
         var buffer = RingBuffer<Int>(capacity: 5)
@@ -35,18 +22,28 @@ extension DataStructureTests {
         buffer.dequeue()
 
         XCTAssertEqual(3, buffer.count)
-        print("begin enqueue \(buffer.readIndex)")
+        
         buffer.enqueue(item: 5)
         buffer.enqueue(item: 6)
-        print("finished enqueue \(buffer.storage)")
+    
         XCTAssertEqual(5, buffer.count)
         
-        for i in buffer {
-            print(i)
+        for (index, val) in buffer.enumerated() {
+            switch index {
+            case 0:
+                XCTAssertEqual(val, 0)
+            case 1:
+                XCTAssertEqual(val, 1)
+            case 2:
+                XCTAssertEqual(val, 3)
+            case 3:
+                XCTAssertEqual(val, 5)
+            case 4:
+                XCTAssertEqual(val, 6)
+            default:
+                break
+            }
         }
-
-        XCTAssertEqual(5, buffer[3])
-        XCTAssertEqual(6, buffer[4])
     }
 
     func test_ring_buffer_empty_full() {
@@ -68,6 +65,16 @@ extension DataStructureTests {
         XCTAssertEqual(buffer.isEmpty, true)
 
         buffer.enqueue(item: 0)
+        
+        XCTAssertEqual(buffer.isEmpty, false)
+        
+        buffer.dequeue()
+        
+        XCTAssertEqual(buffer.isEmpty, true)
+        XCTAssertEqual(buffer.isFull, false)
+        
+        buffer.enqueue(item: 0)
+        
         buffer.enqueue(item: 1)
         buffer.enqueue(item: 2)
         buffer.enqueue(item: 3)

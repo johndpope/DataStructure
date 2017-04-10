@@ -5,7 +5,7 @@ private func constraintedIncrement<T: Integer>(_ i: inout T, constraint: T) {
 
 public struct RingBuffer<T> : Collection {
 
-    var storage: Array<T?>
+    var storage: Array<T>
     
     var readIndex = 0
     var writeIndex = 0
@@ -37,18 +37,23 @@ public struct RingBuffer<T> : Collection {
     }
     
     public init(capacity: Int) {
-        storage = Array<T?>(repeating: nil, count: capacity + 1)
+        storage = Array<T>()
+        storage.reserveCapacity(capacity + 1)
     }
     
     public mutating func enqueue(item: T) {
-        storage[writeIndex] = item
-        constraintedIncrement(&writeIndex, constraint: storage.count)
+        if writeIndex >= self.storage.count && storage.count <= storage.capacity {
+            storage.append(item)
+        } else {
+            storage[writeIndex] = item
+        }
+        constraintedIncrement(&writeIndex, constraint: storage.capacity)
     }
     
     @discardableResult
     public mutating func dequeue() -> T? {
         let retainedReadIndex = readIndex
-        constraintedIncrement(&readIndex, constraint: storage.count)
+        constraintedIncrement(&readIndex, constraint: storage.capacity)
         return storage[retainedReadIndex]
     }
     
@@ -57,23 +62,21 @@ public struct RingBuffer<T> : Collection {
     }
     
     public var isFull: Bool {
-        return readIndex == (writeIndex + 1) % storage.count
+        return readIndex == (writeIndex + 1) % (storage.capacity)
     }
     
     @inline(__always)
     func localIndex(of raw: Int) -> Int {
         if  readIndex > writeIndex {
-            return (readIndex + raw) % (storage.count)
+            return (readIndex + raw) % (storage.capacity)
         }
-        return (readIndex + raw) % (storage.count - 1)
+        return (readIndex + raw) % (storage.capacity - 1)
     }
     
     public subscript(index: Int) -> T {
         get {
-            assert(index < self.capacity, "index out of range")
-            return storage[localIndex(of: index)]!
+            return storage[localIndex(of: index)]
         } set {
-            assert(index < self.capacity, "index out of range")
             storage[localIndex(of: index)] = newValue
         }
     }
