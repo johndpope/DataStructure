@@ -44,7 +44,15 @@ public struct BipBuffer<T> : Collection {
     public init(capacity: Int) {
         storage = Array<T>()
         storage.reserveCapacity(capacity * 2)
-        
+    }
+    
+    public init(_ array: Array<T>, capacity: Int) {
+        let realCapacity = Swift.max(array.count, capacity)
+        storage = Array<T>()
+        storage.reserveCapacity(realCapacity * 2)
+        for item in array {
+            enqueue(item: item)
+        }
     }
     
     public mutating func enqueue(item: T) {
@@ -54,7 +62,7 @@ public struct BipBuffer<T> : Collection {
             storage.append(item)
         } else {
             storage[writeIndex] = item
-            storage[(writeIndex + storage.count/2) % (storage.count/2)] = item
+            storage[(writeIndex + storage.count/2) |%| (storage.count/2)] = item
         }
     
         incrementWriteIndex()
@@ -65,7 +73,7 @@ public struct BipBuffer<T> : Collection {
             return storage[localIndex(of: index)]
         } set {
             storage[index % storage.capacity/2] = newValue
-            storage[(index + storage.count/2) % (storage.count/2)] = newValue
+            storage[(index + storage.count/2) |%| (storage.count/2)] = newValue
         }
     }
     
