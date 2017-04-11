@@ -29,3 +29,9 @@ func bitSizeof<T>(_: T.Type) -> Int {
 func constraintedIncrement<T: Integer>(_ i: inout T, constraint: T) {
     i = (i + 1) % constraint
 }
+
+infix operator |%| {};
+
+func |%|(lhs: Int, rhs: Int) -> Int {
+    return (lhs < 0) ? ((lhs + rhs) |%| rhs) : (lhs % rhs)
+}
