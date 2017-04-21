@@ -376,16 +376,3 @@ public extension LinkedList {
         return it!.pointee.item!
     }
 }
-
-
-
-public struct List<T> {
-    
-    public struct NodeHeader {
-        var prev: Node
-        var next: Node
-    }
-    public final class Node : ManagedBuffer<NodeHeader, T> {
-        
-    }
-}
